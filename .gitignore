@@ -1,0 +1,7 @@
+# Carpetas de compilación y temporales de NetBeans
+/build/
+/dist/
+/nbproject/private/
+
+# Archivos de configuración local del servidor
+/nbproject/ant-deploy.xml
