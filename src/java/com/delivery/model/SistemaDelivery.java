@@ -9,6 +9,10 @@ package com.delivery.model;
  * @author dr405
  */
 public class SistemaDelivery {
+    
+    /*
+        Checkout de la nueva rama o branche...
+    */
     private TablaHash<Usuarios_Proyecto> tablaUsuarios;
 
     public SistemaDelivery() {
