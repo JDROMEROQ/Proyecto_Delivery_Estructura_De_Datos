@@ -10,18 +10,18 @@ package com.delivery.model;
  */
 public class Usuarios_Proyecto {
 
-    // Atributos privados para cumplir con el encapsulamiento
-    private int idUsuario;     // Corresponde a NUMBER en SQL
-    private String nombre;     // Corresponde a VARCHAR2
+    // Atributos privados 
+    private int idUsuario; 
+    private String nombre; 
     private String correo;
     private String clave;
     private String rol;
 
-    // 1. Constructor vacío (necesario para muchas librerías de Java)
+    // 1. Constructor vacío (para librerías de Java)
     public Usuarios_Proyecto() {
     }
 
-    // 2. Constructor con todos los parámetros (útil al traer datos de la DB)
+    // 2. Constructor con todos los parámetros (útil al traer datos de la Base de Datos)
     public Usuarios_Proyecto(int idUsuario, String nombre, String correo, String clave, String rol) {
         this.idUsuario = idUsuario;
         this.nombre = nombre;
@@ -30,20 +30,44 @@ public class Usuarios_Proyecto {
         this.rol = rol;
     }
 
-    // 3. Getters y Setters (Las "puertas" para acceder a los datos)
-    public int getIdUsuario() { return idUsuario; }
-    public void setIdUsuario(int idUsuario) { this.idUsuario = idUsuario; }
+    // 3. Getters y Setters 
+    public int getIdUsuario() {
+        return idUsuario; 
+    }
+    
+    public void setIdUsuario(int idUsuario) { 
+        this.idUsuario = idUsuario; 
+    }
 
-    public String getNombre() { return nombre; }
-    public void setNombre(String nombre) { this.nombre = nombre; }
+    public String getNombre() { 
+        return nombre; 
+    }
+    
+    public void setNombre(String nombre) { 
+        this.nombre = nombre; 
+    }
 
-    public String getCorreo() { return correo; }
-    public void setCorreo(String correo) { this.correo = correo; }
+    public String getCorreo() { 
+        return correo; 
+    }
+    
+    public void setCorreo(String correo) { 
+        this.correo = correo; 
+    }
 
-    public String getClave() { return clave; }
-    public void setClave(String clave) { this.clave = clave; }
+    public String getClave() {
+        return clave; 
+    }
 
-    public String getRol() { return rol; }
-    public void setRol(String rol) { this.rol = rol; }
+    public void setClave(String codigo) { 
+        this.clave = codigo; 
+    }
 
+    public String getRol() {
+        return rol;
+    }
+    
+    public void setRol(String rol) { 
+        this.rol = rol; 
+    }
 }
