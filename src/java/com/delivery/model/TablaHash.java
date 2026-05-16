@@ -130,4 +130,18 @@ public class TablaHash<T> {
         return false; // No se encontró nada para eliminar
     }
     
+    public LinkedList<T> obtenerTodos() {
+    LinkedList<T> todosLosElementos = new LinkedList<>();
+
+    // Recorremos el ARREGLO INTERNO de la TablaHash (cámbialo por cómo se llame tu arreglo ahí)
+    for (LinkedList<Nodo<T>> lista : tabla) { 
+        if (lista != null) {
+            for (Nodo<T> nodo : lista) {
+                todosLosElementos.add(nodo.valor);
+            }
+        }
+    }
+    return todosLosElementos;
+}
+    
 }
