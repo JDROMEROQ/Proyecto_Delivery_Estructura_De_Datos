@@ -3,236 +3,153 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
 package com.delivery.model;
-import java.util.Scanner;
+import java.util.LinkedList;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
 /**
  *
  * @author dr405
  */
 public class SistemaDelivery {
-    private TablaHash<Usuarios_Proyecto> tablaUsuarios; 
-    private Scanner leer;
-    private int contadorIds; // atributo para generar un codigo similar a primary key en la base de datos.
-   
-
+    private TablaHash<Usuarios_Proyecto> tablaUsuarios;
+    private ArbolMulticamino<Usuarios_Proyecto> arbolUsuarios;
+    
     public SistemaDelivery() { // construtor.
         this.tablaUsuarios = new TablaHash<>(11); // Tamaño inicial
-        this.leer = new Scanner(System.in);
-         this.contadorIds = 1;
+        this.arbolUsuarios = new ArbolMulticamino<>();
+        cargarUsuariosDesdeBD();
+    }
+    
+    // metodo para sincronizar el arbol multicamino y las tabla hash
+    private void sincronizarEnEstructuras(Usuarios_Proyecto usuario) {
+        // Insertamos en la Tabla Hash principal con toda su información
+        tablaUsuarios.insertarHash(usuario.getCorreo(), usuario);
+        
+        // Al insertar en el árbol multicamino, obtenemos el nodo raíz del árbol
+        NodoMulticamino<Usuarios_Proyecto> raiz = arbolUsuarios.getRaiz();
+        
+        // Si el nodo raíz no tiene tablas hash inicializadas, le agregamos una
+        if (raiz.getTablas().isEmpty()) {
+            raiz.getTablas().add(tablaUsuarios);
+        }
     }
     
     // metodo inicial del programa.
-    private void registrarPrimerAdmin() {
-        System.out.println("--- Primer Registro ---");
-        System.out.print("Nombre completo: ");
-        String nombre = leer.nextLine();
-        System.out.print("Correo electrónico: ");
-        String correo = leer.nextLine();
-        System.out.print("Contraseña: ");
-        String clave = leer.nextLine();
-        
-        int idActual = contadorIds++;
+    public boolean registrarPrimerAdmin(String nombre, String correo, String clave) {
+        // Si por la tabla ya tiene usuarios, bloqueamos el flujo
+        if (!tablaUsuarios.obtenerTodos().isEmpty()) {
+            return false;
+        }
 
-        // Creamos el usuario fijando el rol como "ADMIN" automáticamente
-        Usuarios_Proyecto primerAdmin = new Usuarios_Proyecto(idActual, nombre, correo, clave, "ADMIN");
-        
-        // Lo guardamos en la Tabla Hash
-        tablaUsuarios.insertarHash(correo, primerAdmin);
-        System.out.println("Registro inicial completado con éxito. Ahora puede iniciar sesión.");
-    }
-    
-    // metodo para entrar al menu principal luego de haber creado un admin inicial.
-    public void ejecutarMenuPrincipal() {
-        boolean ejecutarSistema = true;
-        System.out.println("====== BIENVENIDO AL SISTEMA DE DELIVERY ======");
+        // Comando SQL para que Oracle ponga el ID
+        String sql = "INSERT INTO USUARIOS (CORREO, CLAVE, NOMBRE, ROL) VALUES (?, ?, ?, 'ADMIN')";
 
-        while (ejecutarSistema) {
-            // Validar si la tabla está vacía para forzar el Administrador Inicial
-            if (tablaUsuarios.obtenerTodos().isEmpty()) {
-                registrarPrimerAdmin();
-            } else {
-                System.out.println("\n=== MENÚ DE INICIO ===");
-                System.out.println("1. Iniciar Sesión");
-                System.out.println("2. Registrarse");
-                System.out.println("3. Salir del programa");
-                System.out.print("Seleccione una opción: ");
-                
-                int opcion = leer.nextInt();
-                leer.nextLine(); // Limpiar el buffer de entrada
+        try (Connection cn = Conexion.conectar();
+             PreparedStatement ps = cn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-                switch (opcion) {
-                    case 1:
-                        manejarFlujoLogin(); 
-                        break;
-                    case 2:
-                        manejarFlujoRegistro(); // ➕ Nueva sección interactiva para registrar
-                        break;
-                    case 3:
-                        System.out.println("¡Gracias por utilizar Sistema Delivery! Saliendo...");
-                        ejecutarSistema = false;
-                        break;
-                    default:
-                        System.out.println("Opción no válida. Inténtelo de nuevo.");
+            ps.setString(1, correo);
+            ps.setString(2, clave);
+            ps.setString(3, nombre);
+
+            int filasAfectadas = ps.executeUpdate();
+
+            if (filasAfectadas > 0) {
+                // Recuperamos el ID que generó Oracle
+                try (ResultSet generatedKeys = ps.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        int idGeneradoPorOracle = generatedKeys.getInt(1);
+
+                        // Objeto creado con el ID 
+                        Usuarios_Proyecto primerAdmin = new Usuarios_Proyecto(idGeneradoPorOracle, nombre, correo, clave, "ADMIN");
+                        // Sincronizamos en la Tabla Hash y Árbol simultáneamente
+                        sincronizarEnEstructuras(primerAdmin);
+                        return true; 
+                    }
                 }
             }
+        } catch (Exception e) {
+            System.out.println("Error al registrar el Admin Inicial en la BD: " + e.getMessage());
         }
+        return false;
     }
     
-    // metodo para el manejo de las opciones del inicio de sesion
-    private void manejarFlujoLogin() {
-        System.out.println("\n--- INICIO DE SESIÓN ---");
-        System.out.print("Ingrese su correo electrónico: ");
-        String correo = leer.nextLine();
-        System.out.print("Ingrese su contraseña: ");
-        String clave = leer.nextLine();
-
-        Usuarios_Proyecto usuarioLogueado = realizarLogin(correo, clave);
-
-        if (usuarioLogueado != null) {
-            String rol = usuarioLogueado.getRol().toUpperCase();
-
-            switch (rol) {
-                case "ADMIN":
-                    mostrarMenuAdmin(usuarioLogueado);
-                    break;
-                case "CLIENTE":
-                    mostrarMenuCliente(usuarioLogueado);
-                    break;
-                case "REPARTIDOR":
-                    mostrarMenuRepartidor(usuarioLogueado);
-                    break;
-                default:
-                    System.out.println("⚠️ Error crítico: El usuario tiene un rol no reconocido.");
-                    break;
-            }
-        }
-    
-    }
-    
-    // Interfaz de consola para capturar los datos de un nuevo registro general
-    private void manejarFlujoRegistro() {
-        System.out.println("\n--- REGISTRO DE NUEVO USUARIO ---");
-        System.out.print("Nombre completo: ");
-        String nombre = leer.nextLine();
-        System.out.print("Correo electrónico: ");
-        String correo = leer.nextLine();
-        System.out.print("Contraseña: ");
-        String clave = leer.nextLine();
-        
-        System.out.println("Seleccione el rol:");
-        System.out.println("1. Cliente");
-        System.out.println("2. Repartidor");
-        System.out.print("Opción: ");
-        int opRol = leer.nextInt();
-        leer.nextLine(); // Limpiar buffer
-        
-        String rolSelected = (opRol == 2) ? "REPARTIDOR" : "CLIENTE";
-        int idActual = contadorIds++;
-        
-        Usuarios_Proyecto nuevoUsuario = new Usuarios_Proyecto(idActual, nombre, correo, clave, rolSelected);
-        registrarUsuario(nuevoUsuario); // Llama a la validación lógica
-    }
-    
-    // Metodo para registrar usuarios y validaciones correspondientes.
-    public void registrarUsuario(Usuarios_Proyecto nuevo) { 
-        // Verificacion si ya existe antes de registrarlo
+    // Metodo para registrar usuarios y validaciones correspondientes..
+    public boolean registrarUsuario(Usuarios_Proyecto nuevo) { 
+        // Evitamos correos duplicados 
         if (tablaUsuarios.buscarHash(nuevo.getCorreo()) != null) {
-            System.out.println("Error: El correo " + nuevo.getCorreo() + " ya está registrado.");
-        } else {
-            tablaUsuarios.insertarHash(nuevo.getCorreo(), nuevo);
-            System.out.println("Usuario registrado con éxito.");
+            return false; 
         }
+
+        // Conexion con Oracle SQL para insertar permanentemente
+        String sql = "INSERT INTO USUARIOS (CORREO, CLAVE, NOMBRE, ROL) VALUES (?, ?, ?, ?)";
+
+        // Uso de try-with-resources para asegurar que las conexiones se cierren solas
+        try (Connection cn = Conexion.conectar();
+            PreparedStatement ps = cn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            ps.setString(1, nuevo.getCorreo());
+            ps.setString(2, nuevo.getClave());
+            ps.setString(3, nuevo.getNombre());
+            ps.setString(4, nuevo.getRol());
+
+            int filasAfectadas = ps.executeUpdate();
+
+            if (filasAfectadas > 0) {
+                // ID autoincremental que generó Oracle
+                try (ResultSet generatedKeys = ps.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        int idGeneradoPorOracle = generatedKeys.getInt(1);
+
+                        // Asignamos al objeto el ID de la base de datos
+                        nuevo.setIdUsuario(idGeneradoPorOracle);
+
+                        // Sincronizamos en la Tabla Hash y Árbol simultáneamente
+                        sincronizarEnEstructuras(nuevo);
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error al registrar en la Base de Datos: " + e.getMessage());
+        }
+
+        return false;
     }
     
     // valida los datos ingresados en el login.
     public Usuarios_Proyecto realizarLogin(String correoIngresado, String claveIngresada) {
-        // Buscamos al usuario en la Tabla Hash usando el correo como llave
+        // Buscamos al usuario en la Tabla Hash
         Usuarios_Proyecto user = tablaUsuarios.buscarHash(correoIngresado);
 
-        // Validación de existencia
+        // Si el usuario no existe, devolvemos null
         if (user == null) {
-            System.out.println("Correo no encontrado, por favor vuelva a ingresar un correo registrado.");
             return null; 
         }
 
-        // ️Validación de contraseña
+        // Si la contraseña coincide, devolvemos el objeto del usuario
         if (user.getClave().equals(claveIngresada)) {
-            System.out.println("¡Bienvenido al sistema, " + user.getNombre() + "!");
-            return user; // Devolver el objeto para saber quién inició sesión
+            return user; 
         } else {
-            System.out.println("Contraseña incorrecta. Intente de nuevo.");
+            // Si la contraseña no coincide, devolvemos null
             return null;
         }
     }
     
-    // MENUS POR ROL
-    private void mostrarMenuAdmin(Usuarios_Proyecto admin) {
-        boolean enPanelAdmin = true;
-
-        while (enPanelAdmin) {
-            System.out.println("\n💼 === PANEL DE ADMINISTRADOR ===");
-            System.out.println("Bienvenido: " + admin.getNombre());
-            System.out.println("1. Registrar nuevo usuario (Admin, Cliente, Repartidor)");
-            System.out.println("2. Buscar usuario por correo");
-            System.out.println("3. Eliminar usuario del sistema");
-            System.out.println("4. Listar y clasificar usuarios por Rol");
-            System.out.println("5. Cerrar Sesión (Regresar al Menú Inicial)");
-            System.out.print("Seleccione una opción: ");
-
-            int opcion = leer.nextInt();
-            leer.nextLine(); // Limpiar el buffer de entrada
-
-            switch (opcion) {
-                case 1:
-                    // Reutilizamos el flujo de registro que ya creamos, pero expandido para el admin
-                    manejarRegistroDesdeAdmin();
-                    break;
-                case 2:
-                    manejarBusquedaAdmin();
-                    break;
-                case 3:
-                    manejarEliminacionAdmin();
-                    break;
-                case 4:
-                    // Aquí llamamos a tu excelente idea de listar clasificado
-                    listarUsuariosPorRol();
-                    break;
-                case 5:
-                    System.out.println("Cerrando sesión de administrador...");
-                    enPanelAdmin = false; // Rompe este bucle y regresa automáticamente al menú principal
-                    break;
-                default:
-                    System.out.println("⚠️ Opción no válida. Intente de nuevo.");
-            }
-        }
-    }
-    
-    public void listarUsuariosPorRol() {
-        // Le pedimos a la tabla la lista limpia de todos los usuarios en memoria
+    //Metodo para listar usuarios por clasificacion (cliente, repartidor, administrador)
+    public LinkedList<Usuarios_Proyecto> listarUsuariosPorRol(String rolBuscado) {
         LinkedList<Usuarios_Proyecto> todos = tablaUsuarios.obtenerTodos();
+        LinkedList<Usuarios_Proyecto> listaFiltrada = new LinkedList<>();
 
-        // Validación por si la tabla esta vacia
-        if (todos.isEmpty()) {
-            System.out.println("⚠️ No hay usuarios registrados en el sistema actualmente.");
-            return;
-        }
-
-        // 2. Creamos las tres listas específicas temporales para clasificar
-        LinkedList<Usuarios_Proyecto> admins = new LinkedList<>();
-        LinkedList<Usuarios_Proyecto> clientes = new LinkedList<>();
-        LinkedList<Usuarios_Proyecto> repartidores = new LinkedList<>();
-
-        // Recorrido de la lista y clasificacion según el rol
         for (Usuarios_Proyecto u : todos) {
-            String rol = u.getRol().toUpperCase();
-            if (rol.equals("ADMIN")) {
-                admins.add(u);
-            } else if (rol.equals("CLIENTE")) {
-                clientes.add(u);
-            } else if (rol.equals("REPARTIDOR")) {
-                repartidores.add(u);
+            // Si el rol coincide, lo agregamos
+            if (u.getRol().equalsIgnoreCase(rolBuscado)) {
+                listaFiltrada.add(u);
             }
         }
 
+<<<<<<< HEAD
         // 4. Mostrando en bloques de forma ordenada 
         System.out.println("       REPORTE GLOBAL DE USUARIOS        ");
 
@@ -263,28 +180,41 @@ public class SistemaDelivery {
             }
         }
         System.out.println("=========================================");
+=======
+        return listaFiltrada; // Retornamos la lista 
+>>>>>>> 59aee9bb3db55fda73e18dd551351076e12863c0
     }
-
-    private void manejarBusquedaAdmin() {
-        System.out.println("--- BUSCAR USUARIO ---");
-        System.out.print("Ingrese el correo electrónico del usuario a buscar: ");
-        String correoBuscar = leer.nextLine();
-
-        // Consultamos directamente a nuestra Tabla Hash
-        Usuarios_Proyecto user = tablaUsuarios.buscarHash(correoBuscar);
-
-        // Resultado de la búsqueda
-        if (user != null) {
-            System.out.println("Usuario Encontrado");
-            System.out.println("• ID Usuario:  " + user.getIdUsuario());
-            System.out.println("• Nombre:      " + user.getNombre());
-            System.out.println("• Correo:      " + user.getCorreo());
-            System.out.println("• Rol Asignado: " + user.getRol());
-        } else {
-            System.out.println("No se encontró ningún usuario registrado con el correo: " + correoBuscar);
+    
+    // metodo para obtener datos guardados en sql
+    // Carga inicial de datos al levantar el Servidor Web
+    public void cargarUsuariosDesdeBD() {
+        this.tablaUsuarios = new TablaHash<>(11);
+        this.arbolUsuarios = new ArbolMulticamino<>();
+        
+        String sql = "SELECT ID_USUARIO, NOMBRE, CORREO, CLAVE, ROL FROM USUARIOS";
+        
+        try (Connection cn = Conexion.conectar();
+             PreparedStatement ps = cn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            
+            while (rs.next()) {
+                Usuarios_Proyecto u = new Usuarios_Proyecto(
+                    rs.getInt("ID_USUARIO"),
+                    rs.getString("NOMBRE"),
+                    rs.getString("CORREO"),
+                    rs.getString("CLAVE"),
+                    rs.getString("ROL")
+                );
+                // Inyectamos el usuario recuperado en ambas estructuras de memoria
+                sincronizarEnEstructuras(u);
+            }
+            // Estructuras (Tabla Hash y Árbol) sincronizadas desde Oracle SQL
+        } catch (Exception e) {
+            System.out.println("Error al cargar usuarios desde la BD: " + e.getMessage());
         }
     }
     
+<<<<<<< HEAD
     private void mostrarMenuCliente(Usuarios_Proyecto cliente) {
         System.out.println("\nPanel de Cliente: " + cliente.getNombre());
         // Lógica de pedidos
@@ -293,5 +223,10 @@ public class SistemaDelivery {
     private void mostrarMenuRepartidor(Usuarios_Proyecto repartidor) {
         System.out.println("\nPanel de Repartidor: " + repartidor.getNombre());
         // Lógica de entregas
+=======
+    // Getter para que se recorrer el árbol
+    public ArbolMulticamino<Usuarios_Proyecto> getArbolUsuarios() {
+        return arbolUsuarios;
+>>>>>>> 59aee9bb3db55fda73e18dd551351076e12863c0
     }
 }
