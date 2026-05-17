@@ -254,7 +254,7 @@ public class SistemaDelivery {
             }
         }
 
-        System.out.println("\n📦 [REPARTIDORES] Ocupación: " + repartidores.size());
+        System.out.println("\n [REPARTIDORES] Ocupación: " + repartidores.size());
         if (repartidores.isEmpty()) {
             System.out.println("   (No hay repartidores registrados)");
         } else {
@@ -286,12 +286,12 @@ public class SistemaDelivery {
     }
     
     private void mostrarMenuCliente(Usuarios_Proyecto cliente) {
-        System.out.println("\n🛵 Panel de Cliente: " + cliente.getNombre());
+        System.out.println("\nPanel de Cliente: " + cliente.getNombre());
         // Lógica de pedidos
     }
 
     private void mostrarMenuRepartidor(Usuarios_Proyecto repartidor) {
-        System.out.println("\n📦 Panel de Repartidor: " + repartidor.getNombre());
+        System.out.println("\nPanel de Repartidor: " + repartidor.getNombre());
         // Lógica de entregas
     }
 }

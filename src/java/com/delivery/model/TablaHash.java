@@ -4,10 +4,7 @@
  */
 package com.delivery.model;
 import java.util.LinkedList; // libreria para evitar colisiones de en la tabla hash
-/**
- *
- * @author dr405
- */
+
 public class TablaHash<T> {
     // Arreglo de listas enlazadas 
     private LinkedList<Nodo<T>>[] tabla;
