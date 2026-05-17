@@ -3,6 +3,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
 package com.delivery.model;
+import java.util.LinkedList;
 import java.util.Scanner;
 /**
  *
@@ -169,8 +170,9 @@ public class SistemaDelivery {
         boolean enPanelAdmin = true;
 
         while (enPanelAdmin) {
-            System.out.println("\n💼 === PANEL DE ADMINISTRADOR ===");
+            System.out.println("--- PANEL DE ADMINISTRADOR ---");
             System.out.println("Bienvenido: " + admin.getNombre());
+            System.out.println("Que desea realizar?");
             System.out.println("1. Registrar nuevo usuario (Admin, Cliente, Repartidor)");
             System.out.println("2. Buscar usuario por correo");
             System.out.println("3. Eliminar usuario del sistema");
@@ -179,11 +181,11 @@ public class SistemaDelivery {
             System.out.print("Seleccione una opción: ");
 
             int opcion = leer.nextInt();
-            leer.nextLine(); // Limpiar el buffer de entrada
+            leer.nextLine();
 
             switch (opcion) {
                 case 1:
-                    // Reutilizamos el flujo de registro que ya creamos, pero expandido para el admin
+                    // Utilizamos el flujo de registro ya creado
                     manejarRegistroDesdeAdmin();
                     break;
                 case 2:
@@ -193,30 +195,31 @@ public class SistemaDelivery {
                     manejarEliminacionAdmin();
                     break;
                 case 4:
-                    // Aquí llamamos a tu excelente idea de listar clasificado
+                    // Metodo para listar a todos los usuarios
                     listarUsuariosPorRol();
                     break;
                 case 5:
                     System.out.println("Cerrando sesión de administrador...");
-                    enPanelAdmin = false; // Rompe este bucle y regresa automáticamente al menú principal
+                    enPanelAdmin = false; // cierre del bucle y regreso al menú principal
                     break;
                 default:
-                    System.out.println("⚠️ Opción no válida. Intente de nuevo.");
+                    System.out.println("Opción no válida. Intente de nuevo.");
             }
         }
     }
     
+    //Metodo para listar usuarios por clasificacion (cliente, repartidor, administrador)
     public void listarUsuariosPorRol() {
-        // Le pedimos a la tabla la lista limpia de todos los usuarios en memoria
+        // Le pedimos a la tabla la lista de todos los usuarios
         LinkedList<Usuarios_Proyecto> todos = tablaUsuarios.obtenerTodos();
 
         // Validación por si la tabla esta vacia
         if (todos.isEmpty()) {
-            System.out.println("⚠️ No hay usuarios registrados en el sistema actualmente.");
+            System.out.println("No hay usuarios registrados en el sistema.");
             return;
         }
 
-        // 2. Creamos las tres listas específicas temporales para clasificar
+        // Creacion de tres listas específicas para clasificar
         LinkedList<Usuarios_Proyecto> admins = new LinkedList<>();
         LinkedList<Usuarios_Proyecto> clientes = new LinkedList<>();
         LinkedList<Usuarios_Proyecto> repartidores = new LinkedList<>();
@@ -233,9 +236,8 @@ public class SistemaDelivery {
             }
         }
 
-        // 4. Mostrando en bloques de forma ordenada 
-        System.out.println("       REPORTE GLOBAL DE USUARIOS        ");
-
+        // Mostrando de forma ordenada los usuarios.
+        System.out.println(" --- REPORTE DE USUARIOS ---");
         System.out.println("ADMINISTRADORES] Ocupación: " + admins.size());
         if (admins.isEmpty()) {
             System.out.println("(No hay administradores adicionales)");
@@ -247,22 +249,21 @@ public class SistemaDelivery {
 
         System.out.println("[CLIENTES] Ocupación: " + clientes.size());
         if (clientes.isEmpty()) {
-            System.out.println("   (No hay clientes registrados)");
+            System.out.println("No hay clientes registrados");
         } else {
             for (Usuarios_Proyecto u : clientes) {
                 System.out.println("   • ID: " + u.getIdUsuario() + " | Nombre: " + u.getNombre() + " | Correo: " + u.getCorreo());
             }
         }
 
-        System.out.println("\n📦 [REPARTIDORES] Ocupación: " + repartidores.size());
+        System.out.println("[REPARTIDORES] Ocupación: " + repartidores.size());
         if (repartidores.isEmpty()) {
-            System.out.println("   (No hay repartidores registrados)");
+            System.out.println("No hay repartidores registrados");
         } else {
             for (Usuarios_Proyecto u : repartidores) {
                 System.out.println("   • ID: " + u.getIdUsuario() + " | Nombre: " + u.getNombre() + " | Correo: " + u.getCorreo());
             }
         }
-        System.out.println("=========================================");
     }
 
     private void manejarBusquedaAdmin() {
