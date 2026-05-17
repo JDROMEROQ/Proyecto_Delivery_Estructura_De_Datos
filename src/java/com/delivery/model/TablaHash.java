@@ -131,17 +131,16 @@ public class TablaHash<T> {
     }
     
     public LinkedList<T> obtenerTodos() {
-    LinkedList<T> todosLosElementos = new LinkedList<>();
+        LinkedList<T> todosLosElementos = new LinkedList<>();
 
-    // Recorremos el ARREGLO INTERNO de la TablaHash (cámbialo por cómo se llame tu arreglo ahí)
-    for (LinkedList<Nodo<T>> lista : tabla) { 
-        if (lista != null) {
-            for (Nodo<T> nodo : lista) {
-                todosLosElementos.add(nodo.valor);
+        // Recorremos el ARREGLO INTERNO de la TablaHash (cámbialo por cómo se llame tu arreglo ahí)
+        for (LinkedList<Nodo<T>> lista : tabla) { 
+            if (lista != null) {
+                for (Nodo<T> nodo : lista) {
+                    todosLosElementos.add(nodo.valor);
+                }
             }
         }
+        return todosLosElementos;
     }
-    return todosLosElementos;
-}
-    
 }
