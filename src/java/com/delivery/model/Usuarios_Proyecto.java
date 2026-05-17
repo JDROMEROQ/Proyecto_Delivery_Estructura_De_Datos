@@ -17,11 +17,11 @@ public class Usuarios_Proyecto {
     private String clave;
     private String rol;
 
-    // 1. Constructor vacío (para librerías de Java)
+    // Constructor vacío para librerías
     public Usuarios_Proyecto() {
     }
 
-    // 2. Constructor con todos los parámetros (útil al traer datos de la Base de Datos)
+    // Constructor con todos los parámetros 
     public Usuarios_Proyecto(int idUsuario, String nombre, String correo, String clave, String rol) {
         this.idUsuario = idUsuario;
         this.nombre = nombre;
