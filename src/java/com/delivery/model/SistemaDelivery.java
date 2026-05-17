@@ -1,4 +1,3 @@
-
 package com.delivery.model;
 import java.util.LinkedList;
 import java.sql.Connection;
