@@ -1,7 +1,4 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
+
 package com.delivery.model;
 import java.util.LinkedList;
 import java.sql.Connection;
@@ -15,11 +12,12 @@ import java.sql.Statement;
 public class SistemaDelivery {
     private TablaHash<Usuarios_Proyecto> tablaUsuarios;
     private ArbolMulticamino<Usuarios_Proyecto> arbolUsuarios;
+    private ColaPrioridad_Proyecto colaPedidos = new ColaPrioridad_Proyecto();
     
     public SistemaDelivery() { // construtor.
         this.tablaUsuarios = new TablaHash<>(11); // Tamaño inicial
         this.arbolUsuarios = new ArbolMulticamino<>();
-        cargarUsuariosDesdeBD();
+        cargarUsuarios();
     }
     
     // metodo para sincronizar el arbol multicamino y las tabla hash
@@ -154,7 +152,7 @@ public class SistemaDelivery {
     
     // metodo para obtener datos guardados en sql
     // Carga inicial de datos al levantar el Servidor Web
-    public void cargarUsuariosDesdeBD() {
+    public void cargarUsuarios() {
         this.tablaUsuarios = new TablaHash<>(11);
         this.arbolUsuarios = new ArbolMulticamino<>();
         
@@ -184,5 +182,62 @@ public class SistemaDelivery {
     // Getter para que se recorrer el árbol
     public ArbolMulticamino<Usuarios_Proyecto> getArbolUsuarios() {
         return arbolUsuarios;
+    }
+    
+    public boolean registrarPedido(Pedidos_Proyecto nuevoPedido) {
+        String sql = "INSERT INTO PEDIDOS (ID_CLIENTE, DESCRIPCION, DIRECCION_ENTREGA, URGENCIA) VALUES (?, ?, ?, ?)";
+        
+        try (Connection cn = Conexion.conectar();
+             PreparedStatement ps = cn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            
+            ps.setInt(1, nuevoPedido.getIdCliente());
+            ps.setString(2, nuevoPedido.getDescripcion());
+            ps.setString(3, nuevoPedido.getDireccionEntrega());
+            ps.setInt(4, nuevoPedido.getUrgencia());
+            
+            int filas = ps.executeUpdate();
+            if (filas > 0) {
+                try (ResultSet gk = ps.getGeneratedKeys()) {
+                    if (gk.next()) {
+                        nuevoPedido.setIdPedido(gk.getInt(1));
+                        nuevoPedido.setEstado("PENDIENTE");
+                        colaPedidos.insertar(nuevoPedido); // Al Heap directo
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error al insertar pedido en BD: " + e.getMessage());
+        }
+        return false;
+    }
+
+    public void cargarPedidosDesdeBD() {
+        this.colaPedidos = new ColaPrioridad_Proyecto();
+        String sql = "SELECT ID_PEDIDO, ID_CLIENTE, ID_REPARTIDOR, DESCRIPCION, DIRECCION_ENTREGA, ESTADO, URGENCIA FROM PEDIDOS WHERE ESTADO = 'PENDIENTE'";
+                     
+        try (Connection cn = Conexion.conectar();
+             PreparedStatement ps = cn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            
+            while (rs.next()) {
+                Pedidos_Proyecto p = new Pedidos_Proyecto(
+                    rs.getInt("ID_PEDIDO"),
+                    rs.getInt("ID_CLIENTE"),
+                    (Integer) rs.getObject("ID_REPARTIDOR"),
+                    rs.getString("DESCRIPCION"),
+                    rs.getString("DIRECCION_ENTREGA"),
+                    rs.getString("ESTADO"),
+                    rs.getInt("URGENCIA")
+                );
+                colaPedidos.insertar(p);
+            }
+        } catch (Exception e) {
+            System.out.println("Error al cargar pedidos: " + e.getMessage());
+        }
+    }
+
+    public ColaPrioridad_Proyecto getColaPedidos() {
+        return colaPedidos;
     }
 }
