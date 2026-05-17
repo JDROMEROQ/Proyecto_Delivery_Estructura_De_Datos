@@ -14,9 +14,26 @@ import java.sql.Statement;
  */
 public class SistemaDelivery {
     private TablaHash<Usuarios_Proyecto> tablaUsuarios;
+    private ArbolMulticamino<Usuarios_Proyecto> arbolUsuarios;
     
     public SistemaDelivery() { // construtor.
         this.tablaUsuarios = new TablaHash<>(11); // Tamaño inicial
+        this.arbolUsuarios = new ArbolMulticamino<>();
+        cargarUsuariosDesdeBD();
+    }
+    
+    // metodo para sincronizar el arbol multicamino y las tabla hash
+    private void sincronizarEnEstructuras(Usuarios_Proyecto usuario) {
+        // Insertamos en la Tabla Hash principal con toda su información
+        tablaUsuarios.insertarHash(usuario.getCorreo(), usuario);
+        
+        // Al insertar en el árbol multicamino, obtenemos el nodo raíz del árbol
+        NodoMulticamino<Usuarios_Proyecto> raiz = arbolUsuarios.getRaiz();
+        
+        // Si el nodo raíz no tiene tablas hash inicializadas, le agregamos una
+        if (raiz.getTablas().isEmpty()) {
+            raiz.getTablas().add(tablaUsuarios);
+        }
     }
     
     // metodo inicial del programa.
@@ -46,9 +63,8 @@ public class SistemaDelivery {
 
                         // Objeto creado con el ID 
                         Usuarios_Proyecto primerAdmin = new Usuarios_Proyecto(idGeneradoPorOracle, nombre, correo, clave, "ADMIN");
-
-                        // Guardado en la tabla hash
-                        tablaUsuarios.insertarHash(correo, primerAdmin);
+                        // Sincronizamos en la Tabla Hash y Árbol simultáneamente
+                        sincronizarEnEstructuras(primerAdmin);
                         return true; 
                     }
                 }
@@ -56,7 +72,6 @@ public class SistemaDelivery {
         } catch (Exception e) {
             System.out.println("Error al registrar el Admin Inicial en la BD: " + e.getMessage());
         }
-
         return false;
     }
     
@@ -90,9 +105,9 @@ public class SistemaDelivery {
                         // Asignamos al objeto el ID de la base de datos
                         nuevo.setIdUsuario(idGeneradoPorOracle);
 
-                        // Objeto guardado y completamente sincronizado en la TablaHash
-                        tablaUsuarios.insertarHash(nuevo.getCorreo(), nuevo);
-                        return true; // Éxito total en RAM y Disco
+                        // Sincronizamos en la Tabla Hash y Árbol simultáneamente
+                        sincronizarEnEstructuras(nuevo);
+                        return true;
                     }
                 }
             }
@@ -135,5 +150,39 @@ public class SistemaDelivery {
         }
 
         return listaFiltrada; // Retornamos la lista 
+    }
+    
+    // metodo para obtener datos guardados en sql
+    // Carga inicial de datos al levantar el Servidor Web
+    public void cargarUsuariosDesdeBD() {
+        this.tablaUsuarios = new TablaHash<>(11);
+        this.arbolUsuarios = new ArbolMulticamino<>();
+        
+        String sql = "SELECT ID_USUARIO, NOMBRE, CORREO, CLAVE, ROL FROM USUARIOS";
+        
+        try (Connection cn = Conexion.conectar();
+             PreparedStatement ps = cn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            
+            while (rs.next()) {
+                Usuarios_Proyecto u = new Usuarios_Proyecto(
+                    rs.getInt("ID_USUARIO"),
+                    rs.getString("NOMBRE"),
+                    rs.getString("CORREO"),
+                    rs.getString("CLAVE"),
+                    rs.getString("ROL")
+                );
+                // Inyectamos el usuario recuperado en ambas estructuras de memoria
+                sincronizarEnEstructuras(u);
+            }
+            // Estructuras (Tabla Hash y Árbol) sincronizadas desde Oracle SQL
+        } catch (Exception e) {
+            System.out.println("Error al cargar usuarios desde la BD: " + e.getMessage());
+        }
+    }
+    
+    // Getter para que se recorrer el árbol
+    public ArbolMulticamino<Usuarios_Proyecto> getArbolUsuarios() {
+        return arbolUsuarios;
     }
 }
