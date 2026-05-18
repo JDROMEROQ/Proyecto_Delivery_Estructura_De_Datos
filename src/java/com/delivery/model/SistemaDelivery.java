@@ -34,83 +34,73 @@ public class SistemaDelivery {
     
     // Metodo inicial del programa.
     public boolean registrarPrimerAdmin(String nombre, String correo, String clave) {
-        // Si la tabla ya tiene usuarios, bloqueamos el flujo
         if (!tablaUsuarios.obtenerTodos().isEmpty()) {
             return false;
         }
 
-        // Comando SQL para que Oracle ponga el ID
-        String sql = "INSERT INTO USUARIOS (CORREO, CLAVE, NOMBRE, ROL) VALUES (?, ?, ?, 'ADMIN')";
+        String sql = "INSERT INTO USUARIOS_PROYECTO (ID_USUARIO, CORREO, CLAVE, NOMBRE, ROL) VALUES (USUARIOS_SEQ.NEXTVAL, ?, ?, ?, 'ADMINISTRADOR')";
 
         try (Connection cn = Conexion.conectar();
-             PreparedStatement ps = cn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+             PreparedStatement ps = cn.prepareStatement(sql)) {
 
             ps.setString(1, correo);
             ps.setString(2, clave);
             ps.setString(3, nombre);
 
-            int filasAfectadas = ps.executeUpdate();
+            int filas = ps.executeUpdate();
 
-            if (filasAfectadas > 0) {
-                // Recuperamos el ID que generó Oracle
-                try (ResultSet generatedKeys = ps.getGeneratedKeys()) {
-                    if (generatedKeys.next()) {
-                        int idGeneradoPorOracle = generatedKeys.getInt(1);
-
-                        // Objeto creado con el ID 
-                        Usuarios_Proyecto primerAdmin = new Usuarios_Proyecto(idGeneradoPorOracle, nombre, correo, clave, "ADMIN");
-                        // Sincronizamos en la Tabla Hash y Árbol simultáneamente
+            if (filas > 0) {
+                // Obtenemos el ID que se generó
+                String sqlId = "SELECT USUARIOS_SEQ.CURRVAL FROM DUAL";
+                try (PreparedStatement ps2 = cn.prepareStatement(sqlId);
+                     ResultSet rs = ps2.executeQuery()) {
+                    if (rs.next()) {
+                        int idGenerado = rs.getInt(1);
+                        Usuarios_Proyecto primerAdmin = new Usuarios_Proyecto(idGenerado, nombre, correo, clave, "ADMIN");
                         sincronizarEnEstructuras(primerAdmin);
-                        return true; 
+                        return true;
                     }
                 }
             }
         } catch (Exception e) {
-            System.out.println("Error al registrar el Admin Inicial en la BD: " + e.getMessage());
+            System.out.println("Error al registrar Admin: " + e.getMessage());
         }
         return false;
     }
     
     // Metodo para registrar usuarios y validaciones correspondientes..
-    public boolean registrarUsuario(Usuarios_Proyecto nuevo) { 
-        // Evitamos correos duplicados 
+   public boolean registrarUsuario(Usuarios_Proyecto nuevo) {
         if (tablaUsuarios.buscarHash(nuevo.getCorreo()) != null) {
-            return false; 
+            return false;
         }
 
-        // Conexion con Oracle SQL para insertar permanentemente
-        String sql = "INSERT INTO USUARIOS (CORREO, CLAVE, NOMBRE, ROL) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO USUARIOS_PROYECTO (ID_USUARIO, CORREO, CLAVE, NOMBRE, ROL) VALUES (USUARIOS_SEQ.NEXTVAL, ?, ?, ?, ?)";
 
-        // Uso de try-with-resources para asegurar que las conexiones se cierren solas
         try (Connection cn = Conexion.conectar();
-             PreparedStatement ps = cn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+             PreparedStatement ps = cn.prepareStatement(sql)) {
 
             ps.setString(1, nuevo.getCorreo());
             ps.setString(2, nuevo.getClave());
             ps.setString(3, nuevo.getNombre());
             ps.setString(4, nuevo.getRol());
 
-            int filasAfectadas = ps.executeUpdate();
+            int filas = ps.executeUpdate();
 
-            if (filasAfectadas > 0) {
-                // ID autoincremental que generó Oracle
-                try (ResultSet generatedKeys = ps.getGeneratedKeys()) {
-                    if (generatedKeys.next()) {
-                        int idGeneradoPorOracle = generatedKeys.getInt(1);
-
-                        // Asignamos al objeto el ID de la base de datos
-                        nuevo.setIdUsuario(idGeneradoPorOracle);
-
-                        // Sincronizamos en la Tabla Hash y Árbol simultáneamente
+            if (filas > 0) {
+                String sqlId = "SELECT USUARIOS_SEQ.CURRVAL FROM DUAL";
+                try (PreparedStatement ps2 = cn.prepareStatement(sqlId);
+                     ResultSet rs = ps2.executeQuery()) {
+                    if (rs.next()) {
+                        int idGenerado = rs.getInt(1);
+                        nuevo.setIdUsuario(idGenerado);
                         sincronizarEnEstructuras(nuevo);
                         return true;
                     }
                 }
             }
         } catch (Exception e) {
-            System.out.println("Error al registrar en la Base de Datos: " + e.getMessage());
+            System.out.println("Error al registrar usuario: " + e.getMessage());
         }
-
         return false;
     }
     
@@ -153,7 +143,7 @@ public class SistemaDelivery {
         this.tablaUsuarios = new TablaHash<>(11);
         this.arbolUsuarios = new ArbolMulticamino<>();
         
-        String sql = "SELECT ID_USUARIO, NOMBRE, CORREO, CLAVE, ROL FROM USUARIOS";
+        String sql = "SELECT ID_USUARIO, NOMBRE, CORREO, CLAVE, ROL FROM USUARIOS_PROYECTO";
         
         try (Connection cn = Conexion.conectar();
              PreparedStatement ps = cn.prepareStatement(sql);
@@ -180,7 +170,7 @@ public class SistemaDelivery {
     
     // metodo para el pedido.
     public boolean registrarPedido(Pedidos_Proyecto nuevoPedido) {
-        String sql = "INSERT INTO PEDIDOS (ID_CLIENTE, DESCRIPCION, DIRECCION_ENTREGA, URGENCIA) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO PEDIDOS_PROYECTO (ID_CLIENTE, DESCRIPCION, DIRECCION_ENTREGA, URGENCIA) VALUES (?, ?, ?, ?)";
         
         try (Connection cn = Conexion.conectar();
              PreparedStatement ps = cn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -210,8 +200,7 @@ public class SistemaDelivery {
     // Carga los pedidos ya registrados en oracle
     public void cargarPedidos() {
         this.colaPedidos = new ColaPrioridad_Proyecto();
-        String sql = "SELECT ID_PEDIDO, ID_CLIENTE, ID_REPARTIDOR, DESCRIPCION, DIRECCION_ENTREGA, ESTADO, URGENCIA FROM PEDIDOS WHERE ESTADO = 'PENDIENTE'";
-                     
+        String sql = "SELECT ID_PEDIDO, ID_CLIENTE, ID_REPARTIDOR, DESCRIPCION, DIRECCION_ENTREGA, ESTADO, URGENCIA FROM PEDIDOS_PROYECTO WHERE ESTADO = 'PENDIENTE'";         
         try (Connection cn = Conexion.conectar();
              PreparedStatement ps = cn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -231,6 +220,10 @@ public class SistemaDelivery {
         } catch (Exception e) {
             System.out.println("Error al cargar pedidos: " + e.getMessage());
         }
+    }
+    
+    public java.util.LinkedList<Usuarios_Proyecto> obtenerTodos() {
+        return tablaUsuarios.obtenerTodos();
     }
 
     public ColaPrioridad_Proyecto getColaPedidos() {

@@ -25,7 +25,7 @@
 <div class="register-card">
     <h2>Crear Cuenta</h2>
     
-    <form action="${pageContext.request.contextPath}/controladorRegistro.jsp" method="POST">
+   <form action="${pageContext.request.contextPath}/controladorRegistro.jsp" method="POST">
         <input type="text" name="txtNombre" placeholder="Nombre Completo" required>
         <input type="email" name="txtCorreo" placeholder="Correo electrónico" required>
         <input type="password" name="txtPassword" placeholder="Contraseña" required>
@@ -33,7 +33,7 @@
     </form>
 
     <div class="back-link">
-        <a href="${pageContext.request.contextPath}/redirect.jsp">➔ Volver al Login</a>
+        <a href="${pageContext.request.contextPath}/redirect.jsp">Volver al Login</a>
     </div>
 </div>
 

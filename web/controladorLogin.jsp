@@ -4,42 +4,40 @@
     Author     : dr405
 --%>
 
-<%@page contentType="text/html" pageEncoding="UTF-8"%>
-<%@page import="com.delivery.model.SistemaDelivery"%>
-<%@page import="com.delivery.model.Usuarios_Proyecto"%>
+<%@ page contentType="text/html" pageEncoding="UTF-8"%>
+<%@ page import="com.delivery.model.*" %>
 <%
-    // Leemos el mismo espacio de memoria RAM persistente que usó el registro
     SistemaDelivery sistema = (SistemaDelivery) application.getAttribute("sistemaGlobal");
-    if (sistema == null) {
+
+    String correo = request.getParameter("txtCorreo");
+    String clave  = request.getParameter("txtPassword");
+
+    Usuarios_Proyecto user = sistema.realizarLogin(correo, clave);
+
+    if(sistema == null){
         sistema = new SistemaDelivery();
         application.setAttribute("sistemaGlobal", sistema);
     }
+    
+    if (user != null) {
+        session.setAttribute("usuarioLogueado", user);
+        String rol = user.getRol().toUpperCase().trim();
 
-    String correo = request.getParameter("txtCorreo");
-    String password = request.getParameter("txtPassword");
-
-    if (correo != null && password != null) {
-        Usuarios_Proyecto usuarioAutenticado = sistema.realizarLogin(correo, password);
-
-        if (usuarioAutenticado != null) {
-            session.setAttribute("usuarioLogueado", usuarioAutenticado);
-            String rol = usuarioAutenticado.getRol().toLowerCase().trim();
-
-            if (rol.equals("admin") || rol.equals("administrador")) {
+        switch (rol) {
+            case "ADMINISTRADOR":
                 request.getRequestDispatcher("/WEB-INF/admin.jsp").forward(request, response);
-            } else if (rol.equals("cliente")) {
+                break;
+            case "CLIENTE":
                 request.getRequestDispatcher("/WEB-INF/cliente.jsp").forward(request, response);
-            } else if (rol.equals("repartidor")) {
+                break;
+            case "REPARTIDOR":
                 request.getRequestDispatcher("/WEB-INF/repartidor.jsp").forward(request, response);
-            } else {
-                session.setAttribute("errorLogin", "El rol asignado no cuenta con un área de trabajo.");
-                response.sendRedirect(request.getContextPath() + "/redirect.jsp");
-            }
-        } else {
-            session.setAttribute("errorLogin", "Correo o contraseña incorrectos.");
-            response.sendRedirect(request.getContextPath() + "/redirect.jsp");
+                break;
+            default:
+                response.sendRedirect(request.getContextPath() + "/index.jsp");
         }
     } else {
-        response.sendRedirect(request.getContextPath() + "/redirect.jsp");
+        session.setAttribute("errorLogin", "Correo o contraseña incorrectos.");
+        response.sendRedirect(request.getContextPath() + "/index.jsp");
     }
 %>
