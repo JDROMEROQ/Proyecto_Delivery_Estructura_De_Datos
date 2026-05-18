@@ -10,7 +10,7 @@
         h2 { text-align: center; color: #333; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; color: #666; }
-        input[type="text"], input[type="password"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        input[type="email"], input[type="password"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; margin-bottom: 15px; }
         button { width: 100%; padding: 10px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
         button:hover { background-color: #218838; }
         .error { color: red; text-align: center; margin-bottom: 15px; font-size: 14px; }
@@ -21,21 +21,16 @@
 <div class="login-card">
     <h2>Iniciar Sesión</h2>
     
-    <%-- Muestra un mensaje si las credenciales son incorrectas --%>
-    <% if(request.getAttribute("error") != null) { %>
-        <div class="error"><%= request.getAttribute("error") %></div>
+    <%-- Muestra el mensaje de error si las credenciales fallan --%>
+    <% if (session.getAttribute("errorLogin") != null) { %>
+        <div class="error"><%= session.getAttribute("errorLogin") %></div>
+        <% session.removeAttribute("errorLogin"); // Limpia el error de la sesión %>
     <% } %>
 
-    <%-- El formulario envía los datos a login.htm usando el método POST --%>
-    <form action="login.htm" method="POST">
-        <div class="form-group">
-            <label>Correo Electrónico:</label>
-            <input type="text" name="txtCorreo" required placeholder="ejemplo@delivery.com">
-        </div>
-        <div class="form-group">
-            <label>Contraseña:</label>
-            <input type="password" name="txtPassword" required placeholder="********">
-        </div>
+    <%-- El formulario apunta limpiamente al controlador de la raíz --%>
+    <form action="${pageContext.request.contextPath}/controladorLogin.jsp" method="POST">
+        <input type="email" name="txtCorreo" placeholder="ejemplo@delivery.com" required>
+        <input type="password" name="txtPassword" placeholder="Contraseña" required>
         <button type="submit">Ingresar</button>
     </form>
 </div>
