@@ -17,6 +17,24 @@
         <property name="mappings">
             <props>
                 <prop key="index.htm">indexController</prop>
+                    <bean id="urlMapping" class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+                        <property name="mappings">
+                            <props>
+                                <prop key="index.htm">indexController</prop>
+                            <prop key="login.htm">loginController</prop> </props>
+                    </property>
+                </bean>
+
+                <bean id="viewResolver"
+                      class="org.springframework.web.servlet.view.InternalResourceViewResolver"
+                      p:prefix="/WEB-INF/jsp/"
+                      p:suffix=".jsp" />
+
+                <bean name="indexController"
+                      class="org.springframework.web.servlet.mvc.ParameterizableViewController"
+                      p:viewName="index" />
+
+                <bean name="loginController" class="com.delivery.controller.LoginController" />
             </props>
         </property>
     </bean>

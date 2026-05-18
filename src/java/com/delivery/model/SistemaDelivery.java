@@ -1,28 +1,24 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.delivery.model;
-import java.util.LinkedList;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
-/**
- *
- * @author dr405
- */
+import java.util.LinkedList;
+
 public class SistemaDelivery {
     private TablaHash<Usuarios_Proyecto> tablaUsuarios;
     private ArbolMulticamino<Usuarios_Proyecto> arbolUsuarios;
+    private ColaPrioridad_Proyecto colaPedidos = new ColaPrioridad_Proyecto();
     
-    public SistemaDelivery() { // construtor.
-        this.tablaUsuarios = new TablaHash<>(11); // Tamaño inicial
+    public SistemaDelivery() { // constructor.
+        this.tablaUsuarios = new TablaHash<>(11);
         this.arbolUsuarios = new ArbolMulticamino<>();
-        cargarUsuariosDesdeBD();
+        cargarUsuarios();
+        cargarPedidos(); 
     }
     
-    // metodo para sincronizar el arbol multicamino y las tabla hash
+    // Metodo para sincronizar el arbol multicamino y la tabla hash
     private void sincronizarEnEstructuras(Usuarios_Proyecto usuario) {
         // Insertamos en la Tabla Hash principal con toda su información
         tablaUsuarios.insertarHash(usuario.getCorreo(), usuario);
@@ -36,9 +32,9 @@ public class SistemaDelivery {
         }
     }
     
-    // metodo inicial del programa.
+    // Metodo inicial del programa.
     public boolean registrarPrimerAdmin(String nombre, String correo, String clave) {
-        // Si por la tabla ya tiene usuarios, bloqueamos el flujo
+        // Si la tabla ya tiene usuarios, bloqueamos el flujo
         if (!tablaUsuarios.obtenerTodos().isEmpty()) {
             return false;
         }
@@ -87,7 +83,7 @@ public class SistemaDelivery {
 
         // Uso de try-with-resources para asegurar que las conexiones se cierren solas
         try (Connection cn = Conexion.conectar();
-            PreparedStatement ps = cn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+             PreparedStatement ps = cn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             ps.setString(1, nuevo.getCorreo());
             ps.setString(2, nuevo.getClave());
@@ -118,7 +114,7 @@ public class SistemaDelivery {
         return false;
     }
     
-    // valida los datos ingresados en el login.
+    // Valida los datos ingresados en el login.
     public Usuarios_Proyecto realizarLogin(String correoIngresado, String claveIngresada) {
         // Buscamos al usuario en la Tabla Hash
         Usuarios_Proyecto user = tablaUsuarios.buscarHash(correoIngresado);
@@ -137,7 +133,7 @@ public class SistemaDelivery {
         }
     }
     
-    //Metodo para listar usuarios por clasificacion (cliente, repartidor, administrador)
+    // Metodo para listar usuarios por clasificacion (cliente, repartidor, administrador)
     public LinkedList<Usuarios_Proyecto> listarUsuariosPorRol(String rolBuscado) {
         LinkedList<Usuarios_Proyecto> todos = tablaUsuarios.obtenerTodos();
         LinkedList<Usuarios_Proyecto> listaFiltrada = new LinkedList<>();
@@ -149,45 +145,11 @@ public class SistemaDelivery {
             }
         }
 
-<<<<<<< HEAD
-        // 4. Mostrando en bloques de forma ordenada 
-        System.out.println("       REPORTE GLOBAL DE USUARIOS        ");
-
-        System.out.println("ADMINISTRADORES] Ocupación: " + admins.size());
-        if (admins.isEmpty()) {
-            System.out.println("(No hay administradores adicionales)");
-        } else {
-            for (Usuarios_Proyecto u : admins) {
-                System.out.println("| ID: " + u.getIdUsuario() + " | Nombre: " + u.getNombre() + " | Correo: " + u.getCorreo());
-            }
-        }
-
-        System.out.println("[CLIENTES] Ocupación: " + clientes.size());
-        if (clientes.isEmpty()) {
-            System.out.println("   (No hay clientes registrados)");
-        } else {
-            for (Usuarios_Proyecto u : clientes) {
-                System.out.println("   • ID: " + u.getIdUsuario() + " | Nombre: " + u.getNombre() + " | Correo: " + u.getCorreo());
-            }
-        }
-
-        System.out.println("\n [REPARTIDORES] Ocupación: " + repartidores.size());
-        if (repartidores.isEmpty()) {
-            System.out.println("   (No hay repartidores registrados)");
-        } else {
-            for (Usuarios_Proyecto u : repartidores) {
-                System.out.println("   • ID: " + u.getIdUsuario() + " | Nombre: " + u.getNombre() + " | Correo: " + u.getCorreo());
-            }
-        }
-        System.out.println("=========================================");
-=======
-        return listaFiltrada; // Retornamos la lista 
->>>>>>> 59aee9bb3db55fda73e18dd551351076e12863c0
+        return listaFiltrada; // Conservamos el retorno
     }
     
-    // metodo para obtener datos guardados en sql
     // Carga inicial de datos al levantar el Servidor Web
-    public void cargarUsuariosDesdeBD() {
+    public void cargarUsuarios() {
         this.tablaUsuarios = new TablaHash<>(11);
         this.arbolUsuarios = new ArbolMulticamino<>();
         
@@ -214,19 +176,67 @@ public class SistemaDelivery {
         }
     }
     
-<<<<<<< HEAD
-    private void mostrarMenuCliente(Usuarios_Proyecto cliente) {
-        System.out.println("\nPanel de Cliente: " + cliente.getNombre());
-        // Lógica de pedidos
+    // Getter para recorrer el árbol
+    public ArbolMulticamino<Usuarios_Proyecto> getArbolUsuarios() {
+        return arbolUsuarios; 
+    }
+    
+    // metodo para el pedido.
+    public boolean registrarPedido(Pedidos_Proyecto nuevoPedido) {
+        String sql = "INSERT INTO PEDIDOS (ID_CLIENTE, DESCRIPCION, DIRECCION_ENTREGA, URGENCIA) VALUES (?, ?, ?, ?)";
+        
+        try (Connection cn = Conexion.conectar();
+             PreparedStatement ps = cn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            
+            ps.setInt(1, nuevoPedido.getIdCliente());
+            ps.setString(2, nuevoPedido.getDescripcion());
+            ps.setString(3, nuevoPedido.getDireccionEntrega());
+            ps.setInt(4, nuevoPedido.getUrgencia());
+            
+            int filas = ps.executeUpdate();
+            if (filas > 0) {
+                try (ResultSet gk = ps.getGeneratedKeys()) {
+                    if (gk.next()) {
+                        nuevoPedido.setIdPedido(gk.getInt(1));
+                        nuevoPedido.setEstado("PENDIENTE");
+                        colaPedidos.insertar(nuevoPedido);
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error al insertar pedido en BD: " + e.getMessage());
+        }
+        return false;
     }
 
-    private void mostrarMenuRepartidor(Usuarios_Proyecto repartidor) {
-        System.out.println("\nPanel de Repartidor: " + repartidor.getNombre());
-        // Lógica de entregas
-=======
-    // Getter para que se recorrer el árbol
-    public ArbolMulticamino<Usuarios_Proyecto> getArbolUsuarios() {
-        return arbolUsuarios;
->>>>>>> 59aee9bb3db55fda73e18dd551351076e12863c0
+    // Carga los pedidos ya registrados en oracle
+    public void cargarPedidos() {
+        this.colaPedidos = new ColaPrioridad_Proyecto();
+        String sql = "SELECT ID_PEDIDO, ID_CLIENTE, ID_REPARTIDOR, DESCRIPCION, DIRECCION_ENTREGA, ESTADO, URGENCIA FROM PEDIDOS WHERE ESTADO = 'PENDIENTE'";
+                     
+        try (Connection cn = Conexion.conectar();
+             PreparedStatement ps = cn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            
+            while (rs.next()) {
+                Pedidos_Proyecto p = new Pedidos_Proyecto(
+                    rs.getInt("ID_PEDIDO"),
+                    rs.getInt("ID_CLIENTE"),
+                    (Integer) rs.getObject("ID_REPARTIDOR"),
+                    rs.getString("DESCRIPCION"),
+                    rs.getString("DIRECCION_ENTREGA"),
+                    rs.getString("ESTADO"),
+                    rs.getInt("URGENCIA")
+                );
+                colaPedidos.insertar(p);
+            }
+        } catch (Exception e) {
+            System.out.println("Error al cargar pedidos: " + e.getMessage());
+        }
+    }
+
+    public ColaPrioridad_Proyecto getColaPedidos() {
+        return colaPedidos;
     }
 }
