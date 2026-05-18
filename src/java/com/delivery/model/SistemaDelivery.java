@@ -170,21 +170,23 @@ public class SistemaDelivery {
     
     // metodo para el pedido.
     public boolean registrarPedido(Pedidos_Proyecto nuevoPedido) {
-        String sql = "INSERT INTO PEDIDOS_PROYECTO (ID_CLIENTE, DESCRIPCION, DIRECCION_ENTREGA, URGENCIA) VALUES (?, ?, ?, ?)";
-        
+        String sql = "INSERT INTO PEDIDOS_PROYECTO (ID_PEDIDO, ID_CLIENTE, DESCRIPCION, DIRECCION_ENTREGA, URGENCIA) VALUES (PEDIDOS_SEQ.NEXTVAL, ?, ?, ?, ?)";
+
         try (Connection cn = Conexion.conectar();
-             PreparedStatement ps = cn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            
+             PreparedStatement ps = cn.prepareStatement(sql)) {
+
             ps.setInt(1, nuevoPedido.getIdCliente());
             ps.setString(2, nuevoPedido.getDescripcion());
             ps.setString(3, nuevoPedido.getDireccionEntrega());
             ps.setInt(4, nuevoPedido.getUrgencia());
-            
+
             int filas = ps.executeUpdate();
             if (filas > 0) {
-                try (ResultSet gk = ps.getGeneratedKeys()) {
-                    if (gk.next()) {
-                        nuevoPedido.setIdPedido(gk.getInt(1));
+                String sqlId = "SELECT PEDIDOS_SEQ.CURRVAL FROM DUAL";
+                try (PreparedStatement ps2 = cn.prepareStatement(sqlId);
+                     ResultSet rs = ps2.executeQuery()) {
+                    if (rs.next()) {
+                        nuevoPedido.setIdPedido(rs.getInt(1));
                         nuevoPedido.setEstado("PENDIENTE");
                         colaPedidos.insertar(nuevoPedido);
                         return true;
@@ -192,7 +194,7 @@ public class SistemaDelivery {
                 }
             }
         } catch (Exception e) {
-            System.out.println("Error al insertar pedido en BD: " + e.getMessage());
+            System.out.println("Error al insertar pedido: " + e.getMessage());
         }
         return false;
     }
@@ -200,7 +202,7 @@ public class SistemaDelivery {
     // Carga los pedidos ya registrados en oracle
     public void cargarPedidos() {
         this.colaPedidos = new ColaPrioridad_Proyecto();
-        String sql = "SELECT ID_PEDIDO, ID_CLIENTE, ID_REPARTIDOR, DESCRIPCION, DIRECCION_ENTREGA, ESTADO, URGENCIA FROM PEDIDOS_PROYECTO WHERE ESTADO = 'PENDIENTE'";         
+        String sql = "SELECT ID_PEDIDO, ID_CLIENTE, ID_REPARTIDOR, DESCRIPCION, DIRECCION_ENTREGA, ESTADO, URGENCIA FROM PEDIDOS_PROYECTO WHERE ESTADO IN ('PENDIENTE', 'ASIGNADO')";
         try (Connection cn = Conexion.conectar();
              PreparedStatement ps = cn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -209,7 +211,7 @@ public class SistemaDelivery {
                 Pedidos_Proyecto p = new Pedidos_Proyecto(
                     rs.getInt("ID_PEDIDO"),
                     rs.getInt("ID_CLIENTE"),
-                    (Integer) rs.getObject("ID_REPARTIDOR"),
+                    rs.getObject("ID_REPARTIDOR") != null ? rs.getInt("ID_REPARTIDOR") : null,
                     rs.getString("DESCRIPCION"),
                     rs.getString("DIRECCION_ENTREGA"),
                     rs.getString("ESTADO"),
@@ -220,6 +222,141 @@ public class SistemaDelivery {
         } catch (Exception e) {
             System.out.println("Error al cargar pedidos: " + e.getMessage());
         }
+    }
+    
+    // Eliminar usuario de BD y estructuras
+    public boolean eliminarUsuario(String correo) {
+        Usuarios_Proyecto u = tablaUsuarios.buscarHash(correo);
+        if (u == null) return false;
+
+        String sql = "DELETE FROM USUARIOS_PROYECTO WHERE CORREO = ?";
+        try (Connection cn = Conexion.conectar();
+             PreparedStatement ps = cn.prepareStatement(sql)) {
+            ps.setString(1, correo);
+            int filas = ps.executeUpdate();
+            if (filas > 0) {
+                tablaUsuarios.eliminarHash(correo);
+                return true;
+            }
+        } catch (Exception e) {
+            System.out.println("Error al eliminar usuario: " + e.getMessage());
+        }
+        return false;
+    }
+    
+    // Obtener todos los pedidos (no solo pendientes)
+    public java.util.LinkedList<Pedidos_Proyecto> obtenerTodosPedidos() {
+        java.util.LinkedList<Pedidos_Proyecto> lista = new java.util.LinkedList<>();
+        String sql = "SELECT ID_PEDIDO, ID_CLIENTE, ID_REPARTIDOR, DESCRIPCION, DIRECCION_ENTREGA, ESTADO, URGENCIA FROM PEDIDOS_PROYECTO ORDER BY URGENCIA DESC";
+        try (Connection cn = Conexion.conectar();
+             PreparedStatement ps = cn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                lista.add(new Pedidos_Proyecto(
+                    rs.getInt("ID_PEDIDO"),
+                    rs.getInt("ID_CLIENTE"),
+                    rs.getObject("ID_REPARTIDOR") != null ? rs.getInt("ID_REPARTIDOR") : null,
+                    rs.getString("DESCRIPCION"),
+                    rs.getString("DIRECCION_ENTREGA"),
+                    rs.getString("ESTADO"),
+                    rs.getInt("URGENCIA")
+                ));
+            }
+        } catch (Exception e) {
+            System.out.println("Error al obtener pedidos: " + e.getMessage());
+        }
+        return lista;
+    }
+    
+    // Asignar repartidor a pedido
+    public boolean asignarRepartidor(int idPedido, int idRepartidor) {
+        String sql = "UPDATE PEDIDOS_PROYECTO SET ID_REPARTIDOR = ?, ESTADO = 'ASIGNADO' WHERE ID_PEDIDO = ?";
+        try (Connection cn = Conexion.conectar();
+             PreparedStatement ps = cn.prepareStatement(sql)) {
+            ps.setInt(1, idRepartidor);
+            ps.setInt(2, idPedido);
+            System.out.println("Asignando repartidor " + idRepartidor + " al pedido " + idPedido);
+            int filas = ps.executeUpdate();
+            System.out.println("Filas afectadas: " + filas);
+            if (filas > 0) {
+                cargarPedidos();
+                return true;
+            }
+        } catch (Exception e) {
+            System.out.println("Error al asignar repartidor: " + e.getMessage());
+        }
+        return false;
+    }
+    
+    
+    // Pedidos asignados a un repartidor específico
+    public java.util.LinkedList<Pedidos_Proyecto> obtenerPedidosPorRepartidor(int idRepartidor) {
+        java.util.LinkedList<Pedidos_Proyecto> lista = new java.util.LinkedList<>();
+        String sql = "SELECT ID_PEDIDO, ID_CLIENTE, ID_REPARTIDOR, DESCRIPCION, DIRECCION_ENTREGA, ESTADO, URGENCIA FROM PEDIDOS_PROYECTO WHERE ID_REPARTIDOR = ? AND ESTADO = 'ASIGNADO'";
+        try (Connection cn = Conexion.conectar();
+             PreparedStatement ps = cn.prepareStatement(sql)) {
+            ps.setInt(1, idRepartidor);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    lista.add(new Pedidos_Proyecto(
+                        rs.getInt("ID_PEDIDO"),
+                        rs.getInt("ID_CLIENTE"),
+                        rs.getObject("ID_REPARTIDOR") != null ? rs.getInt("ID_REPARTIDOR") : null,
+                        rs.getString("DESCRIPCION"),
+                        rs.getString("DIRECCION_ENTREGA"),
+                        rs.getString("ESTADO"),
+                        rs.getInt("URGENCIA")
+                    ));
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error al obtener pedidos repartidor: " + e.getMessage());
+        }
+        return lista;
+    }
+    
+    
+
+    // Marcar pedido como entregado
+    public boolean marcarEntregado(int idPedido) {
+        String sql = "UPDATE PEDIDOS_PROYECTO SET ESTADO = 'ENTREGADO' WHERE ID_PEDIDO = ?";
+        try (Connection cn = Conexion.conectar();
+             PreparedStatement ps = cn.prepareStatement(sql)) {
+            ps.setInt(1, idPedido);
+            int filas = ps.executeUpdate();
+            if (filas > 0) {
+                cargarPedidos();
+                return true;
+            }
+        } catch (Exception e) {
+            System.out.println("Error al marcar entregado: " + e.getMessage());
+        }
+        return false;
+    }
+    
+    public java.util.LinkedList<Pedidos_Proyecto> obtenerPedidosPorCliente(int idCliente) {
+        java.util.LinkedList<Pedidos_Proyecto> lista = new java.util.LinkedList<>();
+        String sql = "SELECT ID_PEDIDO, ID_CLIENTE, ID_REPARTIDOR, DESCRIPCION, DIRECCION_ENTREGA, ESTADO, URGENCIA FROM PEDIDOS_PROYECTO WHERE ID_CLIENTE = ? ORDER BY ID_PEDIDO DESC";
+        try (Connection cn = Conexion.conectar();
+             PreparedStatement ps = cn.prepareStatement(sql)) {
+            ps.setInt(1, idCliente);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    lista.add(new Pedidos_Proyecto(
+                        rs.getInt("ID_PEDIDO"),
+                        rs.getInt("ID_CLIENTE"),
+                        rs.getObject("ID_REPARTIDOR") != null ? rs.getInt("ID_REPARTIDOR") : null,
+                        rs.getString("DESCRIPCION"),
+                        rs.getString("DIRECCION_ENTREGA"),
+                        rs.getString("ESTADO"),
+                        rs.getInt("URGENCIA")
+                    ));
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error obtener pedidos cliente: " + e.getMessage());
+        }
+        return lista;
     }
     
     public java.util.LinkedList<Usuarios_Proyecto> obtenerTodos() {

@@ -1,7 +1,7 @@
 <%-- 
     Document   : logout
     Created on : 17/05/2026, 7:38:00 p. m.
-    Author     : dr405
+    Author     : sebas
 --%>
 
 <%@page contentType="text/html" pageEncoding="UTF-8"%>

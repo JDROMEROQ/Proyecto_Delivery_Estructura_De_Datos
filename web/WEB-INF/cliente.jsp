@@ -7,6 +7,7 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@page import="com.delivery.model.Usuarios_Proyecto"%>
 <%@page import="com.delivery.model.SistemaDelivery"%>
+<%@ page import="com.delivery.model.Pedidos_Proyecto" %>
 <%
     // Seguridad: Si no hay sesión o no es cliente, para afuera
     Usuarios_Proyecto clienteLogueado = (Usuarios_Proyecto) session.getAttribute("usuarioLogueado");
@@ -68,13 +69,73 @@
             
             <label>Nivel de Urgencia (Prioridad del Heap):</label>
             <select name="cmbUrgencia">
-                <option value="1">Prioridad Baja (Entrega estándar)</option>
-                <option value="2">Prioridad Media (Envío moderado)</option>
-                <option value="3">Prioridad Alta (¡Emergencia / Entrega Inmediata!)</option>
+                <option value="1">Prioridad Baja</option>
+                <option value="2">Prioridad Media</option>
+                <option value="3">Prioridad Alta</option>
             </select>
             
             <button type="submit">Enviar Pedido al Sistema</button>
         </form>
+    </div>
+        
+        <%-- SECCIÓN: ESTADO E HISTORIAL DE PEDIDOS --%>
+    <%
+        java.util.LinkedList<Pedidos_Proyecto> misPedidos = sistema.obtenerPedidosPorCliente(clienteLogueado.getIdUsuario());
+    %>
+    <div style="max-width: 800px; margin: 20px auto; padding: 0 20px;">
+        <div style="background: white; padding: 20px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <h3 style="border-bottom: 2px solid #e9ecef; padding-bottom: 10px; color: #495057;">
+                Mis Pedidos — Estado e Historial
+            </h3>
+
+            <% if (misPedidos.isEmpty()) { %>
+                <p style="text-align:center; color:#666; padding:20px;">
+                    No tienes pedidos registrados aún.
+                </p>
+            <% } else { %>
+            <table style="width:100%; border-collapse:collapse; font-size:14px;">
+                <tr style="background:#343a40; color:white;">
+                    <th style="padding:10px;">ID</th>
+                    <th style="padding:10px;">Descripción</th>
+                    <th style="padding:10px;">Dirección</th>
+                    <th style="padding:10px;">Urgencia</th>
+                    <th style="padding:10px;">Estado</th>
+                </tr>
+                <% for (Pedidos_Proyecto p : misPedidos) { 
+                    String colorEstado;
+                    switch (p.getEstado()) {
+                        case "PENDIENTE": colorEstado = "#ffc107"; break;
+                        case "ASIGNADO":  colorEstado = "#007bff"; break;
+                        case "ENTREGADO": colorEstado = "#28a745"; break;
+                        default:          colorEstado = "#6c757d";
+                    }
+                %>
+                <tr style="border-bottom:1px solid #dee2e6;">
+                    <td style="padding:10px; text-align:center;">#<%= p.getIdPedido() %></td>
+                    <td style="padding:10px;"><%= p.getDescripcion() %></td>
+                    <td style="padding:10px;"><%= p.getDireccionEntrega() %></td>
+                    <td style="padding:10px; text-align:center;">
+                        <% 
+                            String nivelUrgencia;
+                            switch (p.getUrgencia()) {
+                                case 1: nivelUrgencia = "Baja"; break;
+                                case 2: nivelUrgencia = "Media"; break;
+                                case 3: nivelUrgencia = "Alta"; break;
+                                default: nivelUrgencia = String.valueOf(p.getUrgencia());
+                            }
+                        %>
+                        <%= nivelUrgencia %>
+                    </td>
+                    <td style="padding:10px; text-align:center;">
+                        <span style="background:<%= colorEstado %>; color:white; padding:4px 10px; border-radius:12px; font-size:12px; font-weight:bold;">
+                            <%= p.getEstado() %>
+                        </span>
+                    </td>
+                </tr>
+                <% } %>
+            </table>
+            <% } %>
+        </div>
     </div>
 
     <%-- ESTADO ACADÉMICO DEL MONTÍCULO (HEAP) --%>
@@ -85,11 +146,20 @@
             la reubica en memoria usando el método de flotación.
         </p>
         <pre><%
-            if (sistema != null && sistema.getColaPedidos() != null) {
-                out.print("// Cola de prioridad sincronizada y lista en memoria RAM.\n");
-                out.print("// Estado del Heap: Activo esperando asignación a repartidores.");
-            } else {
-                out.print("// El Heap de pedidos no se ha inicializado.");
+            if (sistema != null) {
+                java.util.LinkedList<Pedidos_Proyecto> colaPedidos = sistema.obtenerPedidosPorCliente(clienteLogueado.getIdUsuario());
+                if (colaPedidos.isEmpty()) {
+                    out.print("// Cola de prioridad vacia. No hay pedidos pendientes.");
+                } else {
+                    out.print("--- COLA DE PRIORIDAD (MAX-HEAP) ---\n\n");
+                    for (Pedidos_Proyecto p : colaPedidos) {
+                        if (p.getEstado().equals("PENDIENTE") || p.getEstado().equals("ASIGNADO")) {
+                            out.print("  Urgencia [" + p.getUrgencia() + "] --> Pedido #" 
+                                + p.getIdPedido() + ": " + p.getDescripcion() 
+                                + " | Estado: " + p.getEstado() + "\n");
+                        }
+                    }
+                }
             }
         %></pre>
     </div>

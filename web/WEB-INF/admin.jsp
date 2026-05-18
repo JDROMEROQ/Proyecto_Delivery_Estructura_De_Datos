@@ -113,13 +113,65 @@
             Cada vez que registras un usuario arriba, este se indexa jerárquicamente en el árbol de la memoria de la aplicación.
         </p>
         <pre><%
-            if (sistema != null && sistema.getArbolUsuarios() != null) {
-                out.print(sistema.getArbolUsuarios().obtenerRecorridoTexto());
-            } else {
-                out.print("// El Arbol Multicamino se encuentra vacio.");
+            if (sistema != null) {
+                java.util.LinkedList<Usuarios_Proyecto> todos = sistema.obtenerTodos();
+                if (todos.isEmpty()) {
+                    out.print("// El Arbol Multicamino se encuentra vacio.");
+                } else {
+                    out.print("--- ARBOL MULTICAMINO ---\n");
+                    out.print("Nodo Raiz --> Tabla Hash Principal\n\n");
+                    for (Usuarios_Proyecto u : todos) {
+                        out.print("  [" + u.getRol().toUpperCase() + "] " 
+                            + u.getNombre() + " | " + u.getCorreo() + "\n");
+                    }
+                }
             }
         %></pre>
     </div>
+    
+    <%-- CARD 4: TODOS LOS PEDIDOS --%>
+    <div class="card card-full">
+    <h3>Todos los Pedidos</h3>
+    <table style="width:100%; border-collapse:collapse; font-size:14px;">
+        <tr style="background:#343a40; color:white;">
+            <th style="padding:8px;">ID</th>
+            <th>Cliente ID</th>
+            <th>Descripción</th>
+            <th>Dirección</th>
+            <th>Urgencia</th>
+            <th>Estado</th>
+            <th>Asignar Repartidor</th>
+        </tr>
+        <%
+            java.util.LinkedList<com.delivery.model.Pedidos_Proyecto> pedidos = sistema.obtenerTodosPedidos();
+            java.util.LinkedList<com.delivery.model.Usuarios_Proyecto> repartidores = sistema.listarUsuariosPorRol("REPARTIDOR");
+            for (com.delivery.model.Pedidos_Proyecto p : pedidos) {
+        %>
+        <tr style="border-bottom:1px solid #dee2e6;">
+            <td style="padding:8px; text-align:center;"><%= p.getIdPedido() %></td>
+            <td style="text-align:center;"><%= p.getIdCliente() %></td>
+            <td><%= p.getDescripcion() %></td>
+            <td><%= p.getDireccionEntrega() %></td>
+            <td style="text-align:center;"><%= p.getUrgencia() %></td>
+            <td style="text-align:center;"><%= p.getEstado() %></td>
+            <td>
+                <% if ("PENDIENTE".equals(p.getEstado())) { %>
+                <form action="${pageContext.request.contextPath}/controladorAccionesAdmin.jsp?accion=asignar" method="POST" style="display:flex; gap:4px;">
+                    <input type="hidden" name="idPedido" value="<%= p.getIdPedido() %>">
+                    <select name="idRepartidor" style="padding:4px; margin:0;">
+                        <% for (com.delivery.model.Usuarios_Proyecto r : repartidores) { %>
+                        <option value="<%= r.getIdUsuario() %>"><%= r.getNombre() %></option>
+                        <% } %>
+                    </select>
+                    <button type="submit" class="btn-primary" style="padding:4px 8px;">Asignar</button>
+                </form>
+                <% } else { %>
+                    <span style="color:#28a745;">Asignado</span>
+                <% } %>
+            </td>
+        </tr>
+        <% } %>
+    </table>
 
 </div>
 
