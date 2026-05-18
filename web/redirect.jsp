@@ -5,6 +5,10 @@
 --%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%
-    
-    request.getRequestDispatcher("/WEB-INF/index.jsp").forward(request, response);
+    String accion = request.getParameter("accion");
+    if ("irARegistro".equals(accion)) {
+        request.getRequestDispatcher("/WEB-INF/registro.jsp").forward(request, response);
+    } else {
+        request.getRequestDispatcher("/WEB-INF/index.jsp").forward(request, response);
+    }
 %>

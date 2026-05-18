@@ -176,10 +176,7 @@ public class SistemaDelivery {
         }
     }
     
-    // Getter para recorrer el árbol
-    public ArbolMulticamino<Usuarios_Proyecto> getArbolUsuarios() {
-        return arbolUsuarios; 
-    }
+   
     
     // metodo para el pedido.
     public boolean registrarPedido(Pedidos_Proyecto nuevoPedido) {
@@ -238,5 +235,14 @@ public class SistemaDelivery {
 
     public ColaPrioridad_Proyecto getColaPedidos() {
         return colaPedidos;
+    }
+    
+    public TablaHash<Usuarios_Proyecto> getTablaUsuarios() { 
+        return tablaUsuarios; 
+    }
+    
+     // Getter para recorrer el árbol
+    public ArbolMulticamino<Usuarios_Proyecto> getArbolUsuarios() {
+        return arbolUsuarios; 
     }
 }

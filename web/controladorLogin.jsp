@@ -8,7 +8,12 @@
 <%@page import="com.delivery.model.SistemaDelivery"%>
 <%@page import="com.delivery.model.Usuarios_Proyecto"%>
 <%
-    SistemaDelivery sistema = new SistemaDelivery();
+    // Leemos el mismo espacio de memoria RAM persistente que usó el registro
+    SistemaDelivery sistema = (SistemaDelivery) application.getAttribute("sistemaGlobal");
+    if (sistema == null) {
+        sistema = new SistemaDelivery();
+        application.setAttribute("sistemaGlobal", sistema);
+    }
 
     String correo = request.getParameter("txtCorreo");
     String password = request.getParameter("txtPassword");
@@ -20,7 +25,6 @@
             session.setAttribute("usuarioLogueado", usuarioAutenticado);
             String rol = usuarioAutenticado.getRol().toLowerCase().trim();
 
-            // Corregimos quitando el "/jsp/" y usando los nombres exactos de tus archivos
             if (rol.equals("admin") || rol.equals("administrador")) {
                 request.getRequestDispatcher("/WEB-INF/admin.jsp").forward(request, response);
             } else if (rol.equals("cliente")) {

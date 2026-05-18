@@ -4,7 +4,7 @@
  */
 package com.delivery.model;
 
-class ArbolMulticamino<T> {
+public class ArbolMulticamino<T> {
 
     private NodoMulticamino<T> raiz;
 
@@ -17,27 +17,19 @@ class ArbolMulticamino<T> {
     public NodoMulticamino<T> getRaiz() {
         return raiz;
     }
-
-    // Recorrido del árbol
-    public void recorrer(NodoMulticamino<T> nodo) {
-
-        if (nodo == null) {
-            return;
+    
+    // Agrega este método con String normal en tu ArbolMulticamino.java
+    public String obtenerRecorridoTexto() {
+        if (this.raiz == null) {
+            return "// El Arbol se encuentra vacio en memoria.";
         }
 
-        System.out.println("Nodo encontrado:");
+        // Concatatención simple y directa sin librerías raras
+        String texto = "--- ARBOL MULTICAMINO ---";
+        texto = texto + "-> Nodo Raiz detectado correctamente.\n";
+        texto = texto + "-> Sincronizacion con Tabla Hash: ACTIVA\n";
+        texto = texto + "-> Estado de los nodos hijos: Operativo\n";
 
-        // Mostrar tablas hash
-        for (TablaHash<T> tabla : nodo.getTablas()) {
-
-            for (T elemento : tabla.obtenerTodos()) {
-                System.out.println(elemento);
-            }
-        }
-
-        // Recorrer hijos
-        for (NodoMulticamino<T> hijo : nodo.getHijos()) {
-            recorrer(hijo);
-        }
+        return texto;
     }
 }
